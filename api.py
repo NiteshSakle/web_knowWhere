@@ -22,7 +22,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = 'password'
+MYSQL_PASSWORD = '1'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
@@ -94,10 +94,10 @@ def _error(msg=""):
 
 
 def check_auth(auth):
-    g.cur.execute("SELECT id FROM user_tokens where token = %s and is_valid = 1", (auth,))
+    g.cur.execute("SELECT user_id FROM user_tokens where token = %s and is_valid = 1", (auth,))
     user = g.cur.fetchone()
     if user is not None:
-        g.loggegin_user_id = user.id
+        g.loggedin_user_id = user["user_id"]
         return True
 
 
@@ -144,17 +144,17 @@ def update_user_location():
     lon = request.form.get('lon')
     radius = request.form.get('radius')
 
-    g.cur.execute("insert into user_locations (user_id, lat, lon, radius) values (%s, %s, %s, %s)", (g.loggegin_user_id, lat, lon, radius))
+    g.cur.execute("insert into user_location (user_id, lat, lon, radius ) values (%s, %s, %s, %s)", (g.loggedin_user_id, lat, lon, radius))
     g.db.commit()
 
     return success()
 
 
-@app.route('/api/v1/user/<user_id>/location', methods=['GET'])
+@app.route('/api/v1/user/location', methods=['GET'])
 @requires_auth
-def get_location(user_id):
+def get_location():
 
-    g.cur.execute("select lat, lon, radius, created_at from user_locations where user_id = %s order by created_at DESC limit 20", (g.loggegin_user_id,))
+    g.cur.execute("select lat, lon, radius, created_at from user_location where user_id = %s order by created_at DESC limit 20", (g.loggedin_user_id,))
     locations = g.cur.fetchall()
 
     return success(locations)
@@ -168,7 +168,7 @@ def auth():
     user = g.cur.fetchone()
 
     if user is None:
-        g.cur.execute("insert into users (email) values (%s)", (email,))
+        g.cur.execute("insert into users (email,location) values (%s,%s)", (email,""))
         g.db.commit()
         user_id = g.cur.lastrowid
     else:
@@ -182,8 +182,8 @@ def auth():
     g.db.commit()
 
     return success({
-        user_id: user_id,
-        token: token
+        "id": user_id,
+        "token": token
     })
 
 
