@@ -1,0 +1,2 @@
+ALTER TABLE  `user_location` CHANGE  `created_at`  `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ;
+ALTER TABLE  `user_location` CHANGE  `updated_at`  `updated_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ;
