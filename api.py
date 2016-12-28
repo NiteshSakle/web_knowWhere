@@ -17,6 +17,7 @@ import sys
 import datetime
 import uuid
 
+
 app = Flask(__name__)
 
 API_KEY = 'knowWhereAPIKEY'
@@ -51,7 +52,7 @@ def setup_logger():
     h2.setFormatter(formatter)
 
     logger.addHandler(h1)
-    logger.addHandler(h2)
+    logger.addHandler(h2)    
     ###############################
 
 
@@ -93,7 +94,7 @@ def _error(msg=""):
     return resp
 
 
-def check_auth(auth):
+def check_auth(auth):    
     g.cur.execute("SELECT user_id FROM user_tokens where token = %s and is_valid = 1", (auth,))
     user = g.cur.fetchone()
     if user is not None:
@@ -149,6 +150,43 @@ def update_user_location():
 
     return success()
 
+@app.route('/api/v1/user/friends', methods=['POST'])
+@requires_auth
+def send_friend_request():
+    friend_email = request.form.get('friend_email')
+    g.cur.execute("SELECT id FROM users where email = %s ", (friend_email))
+    friend = g.cur.fetchone()
+    if friend is not None :
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id))
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", ( friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id))
+        g.db.commit()
+        
+        return success()
+    else :
+        return _error("Requested email hasn't registered yet")
+
+
+@app.route('/api/v1/user/friends', methods=['GET'])
+@requires_auth
+def get_friends_list():    
+    g.cur.execute("SELECT friends.friend_id as friend_id, friends.id as friend_request_id,friends.requester_id as requester_id, friends.status as status, users.email as friend_email, friends.created_at as created_at, friends.updated_at as updated_at  FROM friends join users on friends.friend_id = users.id  where user_id = %s ", (g.loggedin_user_id))    
+    friends = g.cur.fetchall()
+    if friends is not None :                
+        return success(friends)
+    else :
+        return _error("You don't have any friends")
+
+@app.route('/api/v1/user/update_friends', methods=['POST'])
+@requires_auth
+def update_friend_request_status():    
+    friend_id = request.form.get('friend_id')
+    
+    g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(g.loggedin_user_id, friend_id))
+    g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(friend_id, g.loggedin_user_id))
+    g.db.commit()
+                 
+    return success()
+    
 
 @app.route('/api/v1/user/location', methods=['GET'])
 @requires_auth
