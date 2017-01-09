@@ -16,6 +16,7 @@ import requests
 import sys
 import datetime
 import uuid
+import urllib
 
 
 app = Flask(__name__)
@@ -146,6 +147,7 @@ def update_user_location():
     radius = request.form.get('radius')
 
     g.cur.execute("insert into user_location (user_id, lat, lon, radius ) values (%s, %s, %s, %s)", (g.loggedin_user_id, lat, lon, radius))
+    g.cur.execute("UPDATE  users SET  lat =  %s, lon = %s WHERE  users.id = %s;", (lat, lon, g.loggedin_user_id))
     g.db.commit()
 
     return success()
@@ -169,7 +171,7 @@ def send_friend_request():
 @app.route('/api/v1/user/friends', methods=['GET'])
 @requires_auth
 def get_friends_list():    
-    g.cur.execute("SELECT friends.friend_id as friend_id, friends.id as friend_request_id,friends.requester_id as requester_id, friends.status as status, users.email as friend_email, friends.created_at as created_at, friends.updated_at as updated_at  FROM friends join users on friends.friend_id = users.id  where user_id = %s ", (g.loggedin_user_id))    
+    g.cur.execute("SELECT friends.friend_id as friend_id, friends.id as friend_request_id,friends.requester_id as requester_id, friends.status as status, users.email as friend_email, users.first_name as friend_first_name, friends.created_at as created_at, friends.updated_at as updated_at  FROM friends join users on friends.friend_id = users.id  where user_id = %s ", (g.loggedin_user_id))    
     friends = g.cur.fetchall()
     if friends is not None :                
         return success(friends)
@@ -201,29 +203,38 @@ def get_location():
 @app.route('/api/v1/auth', methods=['POST'])
 def auth():
 
-    email = request.form.get('email')
-    g.cur.execute("SELECT id FROM users where email = %s", (email,))
-    user = g.cur.fetchone()
+    access_token = request.form.get('access_token')    
+    data = urllib.urlopen("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + access_token).read()    
+    json_response = json.loads(data)
+    if  not ('error_description' in json_response ):
+             
+        g.cur.execute("SELECT * FROM users where email = %s", (json_response['email']))        
+        user = g.cur.fetchone()
+        
+        if user is None:
+            g.cur.execute("insert into users (email, location, first_name, last_name) values (%s, %s, %s, %s)", (json_response['email'], "", json_response['given_name'], json_response['family_name'] ))
+            g.db.commit()
+            user_id = g.cur.lastrowid
+        else:
+            user_id = user["id"]
+            g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
+            g.db.commit()
 
-    if user is None:
-        g.cur.execute("insert into users (email,location) values (%s,%s)", (email,""))
+        token = get_unique_token()
+
+        g.cur.execute("insert into user_tokens (user_id, token) values (%s, %s)", (user_id, token))
         g.db.commit()
-        user_id = g.cur.lastrowid
-    else:
-        user_id = user["id"]
-        g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
-        g.db.commit()
 
-    token = get_unique_token()
-
-    g.cur.execute("insert into user_tokens (user_id, token) values (%s, %s)", (user_id, token))
-    g.db.commit()
-
-    return success({
-        "id": user_id,
-        "token": token
-    })
-
+        return success({
+            "id": user_id,
+            "first_name" :  json_response['given_name'],
+            "last_name" :  json_response['family_name'] ,
+            "lat" : user['lat'],
+            "lon" : user['lon'],
+            "token": token
+        })
+    else:        
+        return _error(json_response['error_description'])
 
 def get_unique_token():
     token = False
