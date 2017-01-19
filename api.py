@@ -173,10 +173,30 @@ def send_friend_request():
 def get_friends_list():    
     g.cur.execute("SELECT friends.friend_id as friend_id, friends.id as friend_request_id,friends.requester_id as requester_id, friends.status as status, users.email as friend_email, users.first_name as friend_first_name, friends.created_at as created_at, friends.updated_at as updated_at  FROM friends join users on friends.friend_id = users.id  where user_id = %s ", (g.loggedin_user_id))    
     friends = g.cur.fetchall()
-    if friends is not None :                
+    if friends is not None :   
+        for friend in friends :
+            if friend['status'] == 1 :
+                g.cur.execute("SELECT lat,lon from users where id = %s",friend['friend_id'])
+                result = g.cur.fetchone()
+                friend['location'] = result             
+        
         return success(friends)
     else :
         return _error("You don't have any friends")
+
+
+@app.route('/api/v1/user/friend_location', methods=['GET'])
+@requires_auth
+def get_friend_location():    
+    friend_id = request.args['friend_id']
+    g.cur.execute("SELECT user_location.lat, user_location.lon, user_location.radius, user_location.created_at, friends.friend_id, friends.user_id, friends.status from friends join user_location on friends.friend_id = user_location.user_id where user_location.user_id = %s and friends.friend_id = %s and friends.user_id = %s and friends.status = 1  order by created_at DESC limit 20", (friend_id,friend_id,g.loggedin_user_id))    
+    friends = g.cur.fetchall()   
+    
+    if friends is not None :                    
+        return success(friends)
+    else :
+        return _error("you are not a friend")
+
 
 @app.route('/api/v1/user/update_friends', methods=['POST'])
 @requires_auth
