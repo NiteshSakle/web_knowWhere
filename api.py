@@ -232,9 +232,11 @@ def auth():
         user = g.cur.fetchone()
         
         if user is None:
-            g.cur.execute("insert into users (email, location, first_name, last_name) values (%s, %s, %s, %s)", (json_response['email'], "", json_response['given_name'], json_response['family_name'] ))
+            g.cur.execute("insert into users (email, lat, lon, first_name, last_name) values (%s, %s, %s, %s, %s)", (json_response['email'], '', '', json_response['given_name'], json_response['family_name'] ))
             g.db.commit()
             user_id = g.cur.lastrowid
+            g.cur.execute("SELECT * FROM users where id = %s", (user_id))        
+            user = g.cur.fetchone() 
         else:
             user_id = user["id"]
             g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
