@@ -24,7 +24,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = '1'
+MYSQL_PASSWORD = 'lkgukg'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
@@ -175,7 +175,7 @@ def get_friends_list():
         friends.requester_id as requester_id, friends.status as status,
         users.email as friend_email, users.first_name as friend_first_name,
         IF(friends.status = 1 , users.lat, 0) as lat,
-        IF(friends.status = 1 , users.lon, 0) as lat,
+        IF(friends.status = 1 , users.lon, 0) as lon,
         IF(friends.status = 1 , users.updated_at, '') as last_known_time,
         friends.created_at as created_at, friends.updated_at as updated_at
     FROM friends join users on friends.friend_id = users.id
