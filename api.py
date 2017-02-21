@@ -182,7 +182,7 @@ def get_friends_list():
         where user_id = %s """, (g.loggedin_user_id))
 
     friends = g.cur.fetchall()
-    # if friends is not None:
+    if friends is not None:
     #     for friend in friends:
     #         if friend['status'] == 1 :
     #             g.cur.execute("SELECT lat,lon from users where id = %s", friend['friend_id'])
