@@ -35,16 +35,16 @@ class InfoFilter(logging.Filter):
         return rec.levelno in (logging.DEBUG, logging.INFO)
 
 
-class SpecializedJSONEncoder(json.JSONEncoder):
-    def default(o):
-        if isinstance(o, datetime.date):
-            return date.strftime("%Y-%m-%d")
-        elif isinstance(o, datetime.datetime):
-            return date.strftime("%Y-%m-%d %h:%i:%s")
-        else:
-            super(SpecializedJSONEncoder, self).default(o)
-
-app.json_encoder = SpecializedJSONEncoder
+# class SpecializedJSONEncoder(json.JSONEncoder):
+#     def default(o):
+#         if isinstance(o, datetime.date):
+#             return date.strftime("%Y-%m-%d")
+#         elif isinstance(o, datetime.datetime):
+#             return date.strftime("%Y-%m-%d %h:%i:%s")
+#         else:
+#             super(SpecializedJSONEncoder, self).default(o)
+#
+# app.json_encoder = SpecializedJSONEncoder
 
 logger = logging.getLogger(__name__)
 
