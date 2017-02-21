@@ -39,9 +39,9 @@ class InfoFilter(logging.Filter):
 class SpecializedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, date):
-            return date.strftime("%Y-%m-%d")
+            return o.strftime("%Y-%m-%d")
         elif isinstance(o, datetime):
-            return date.strftime("%Y-%m-%d %h:%i:%s")
+            return o.strftime("%Y-%m-%d %h:%i:%s")
         else:
             super(SpecializedJSONEncoder, self).default(o)
 
