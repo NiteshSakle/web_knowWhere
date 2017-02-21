@@ -39,7 +39,7 @@ class InfoFilter(logging.Filter):
 class SpecializedJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, date):
-            return o.strftime("%Y-%m-%d")
+            return o.strftime("%Y-%m-%d %h:%i:%s")
         elif isinstance(o, datetime):
             return o.strftime("%Y-%m-%d %h:%i:%s")
         else:
