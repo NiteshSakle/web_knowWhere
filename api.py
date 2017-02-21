@@ -53,7 +53,7 @@ def setup_logger():
     h2.setFormatter(formatter)
 
     logger.addHandler(h1)
-    logger.addHandler(h2)    
+    logger.addHandler(h2)
     ###############################
 
 
@@ -95,7 +95,7 @@ def _error(msg=""):
     return resp
 
 
-def check_auth(auth):    
+def check_auth(auth):
     g.cur.execute("SELECT user_id FROM user_tokens where token = %s and is_valid = 1", (auth,))
     user = g.cur.fetchone()
     if user is not None:
@@ -162,7 +162,7 @@ def send_friend_request():
         g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id))
         g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", ( friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id))
         g.db.commit()
-        
+
         return success()
     else :
         return _error("Requested email hasn't registered yet")
@@ -170,16 +170,25 @@ def send_friend_request():
 
 @app.route('/api/v1/user/friends', methods=['GET'])
 @requires_auth
-def get_friends_list():    
-    g.cur.execute("SELECT friends.friend_id as friend_id, friends.id as friend_request_id,friends.requester_id as requester_id, friends.status as status, users.email as friend_email, users.first_name as friend_first_name, friends.created_at as created_at, friends.updated_at as updated_at  FROM friends join users on friends.friend_id = users.id  where user_id = %s ", (g.loggedin_user_id))    
+def get_friends_list():
+    g.cur.execute("""SELECT friends.friend_id as friend_id, friends.id as friend_request_id,
+        friends.requester_id as requester_id, friends.status as status,
+        users.email as friend_email, users.first_name as friend_first_name,
+        IF(friends.status = 1 , users.lat, 0) as lat,
+        IF(friends.status = 1 , users.lon, 0) as lat,
+        IF(friends.status = 1 , users.updated_at, '') as last_known_time,
+        friends.created_at as created_at, friends.updated_at as updated_at
+    FROM friends join users on friends.friend_id = users.id
+        where user_id = %s """, (g.loggedin_user_id))
+
     friends = g.cur.fetchall()
-    if friends is not None :   
-        for friend in friends :
-            if friend['status'] == 1 :
-                g.cur.execute("SELECT lat,lon from users where id = %s",friend['friend_id'])
-                result = g.cur.fetchone()
-                friend['location'] = result             
-        
+    # if friends is not None:
+    #     for friend in friends:
+    #         if friend['status'] == 1 :
+    #             g.cur.execute("SELECT lat,lon from users where id = %s", friend['friend_id'])
+    #             result = g.cur.fetchone()
+    #             friend['location'] = result
+    #
         return success(friends)
     else :
         return _error("You don't have any friends")
@@ -187,34 +196,42 @@ def get_friends_list():
 
 @app.route('/api/v1/user/friend_location', methods=['GET'])
 @requires_auth
-def get_friend_location():    
+def get_friend_location():
     friend_id = request.args['friend_id']
-    g.cur.execute("SELECT user_location.lat, user_location.lon, user_location.radius, user_location.created_at, friends.friend_id, friends.user_id, friends.status from friends join user_location on friends.friend_id = user_location.user_id where user_location.user_id = %s and friends.friend_id = %s and friends.user_id = %s and friends.status = 1  order by created_at DESC limit 20", (friend_id,friend_id,g.loggedin_user_id))    
-    friends = g.cur.fetchall()   
-    
-    if friends is not None :                    
+    g.cur.execute("""SELECT user_location.lat, user_location.lon, user_location.radius,
+        user_location.created_at, user_location.updated_at,
+        friends.friend_id, friends.user_id, friends.status
+        from friends join user_location on friends.friend_id = user_location.user_id
+        where user_location.user_id = %s
+            and friends.friend_id = %s
+            and friends.user_id = %s
+            and friends.status = 1
+        order by created_at DESC limit 50""", (friend_id, friend_id, g.loggedin_user_id))
+    friends = g.cur.fetchall()
+
+    if friends is not None:
         return success(friends)
-    else :
+    else:
         return _error("you are not a friend")
 
 
 @app.route('/api/v1/user/update_friends', methods=['POST'])
 @requires_auth
-def update_friend_request_status():    
+def update_friend_request_status():
     friend_id = request.form.get('friend_id')
-    
+
     g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(g.loggedin_user_id, friend_id))
     g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(friend_id, g.loggedin_user_id))
     g.db.commit()
-                 
+
     return success()
-    
+
 
 @app.route('/api/v1/user/location', methods=['GET'])
 @requires_auth
 def get_location():
 
-    g.cur.execute("select lat, lon, radius, created_at from user_location where user_id = %s order by created_at DESC limit 20", (g.loggedin_user_id,))
+    g.cur.execute("select lat, lon, radius, created_at, updated_at from user_location where user_id = %s order by created_at DESC limit 50", (g.loggedin_user_id,))
     locations = g.cur.fetchall()
 
     return success(locations)
@@ -223,20 +240,20 @@ def get_location():
 @app.route('/api/v1/auth', methods=['POST'])
 def auth():
 
-    access_token = request.form.get('access_token')    
-    data = urllib.urlopen("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + access_token).read()    
+    access_token = request.form.get('access_token')
+    data = urllib.urlopen("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + access_token).read()
     json_response = json.loads(data)
     if  not ('error_description' in json_response ):
-             
-        g.cur.execute("SELECT * FROM users where email = %s", (json_response['email']))        
+
+        g.cur.execute("SELECT * FROM users where email = %s", (json_response['email']))
         user = g.cur.fetchone()
-        
+
         if user is None:
             g.cur.execute("insert into users (email, lat, lon, first_name, last_name) values (%s, %s, %s, %s, %s)", (json_response['email'], '', '', json_response['given_name'], json_response['family_name'] ))
             g.db.commit()
             user_id = g.cur.lastrowid
-            g.cur.execute("SELECT * FROM users where id = %s", (user_id))        
-            user = g.cur.fetchone() 
+            g.cur.execute("SELECT * FROM users where id = %s", (user_id))
+            user = g.cur.fetchone()
         else:
             user_id = user["id"]
             g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
@@ -255,7 +272,7 @@ def auth():
             "lon" : user['lon'],
             "token": token
         })
-    else:        
+    else:
         return _error(json_response['error_description'])
 
 def get_unique_token():
