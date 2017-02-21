@@ -147,7 +147,7 @@ def update_user_location():
     radius = request.form.get('radius')
 
     g.cur.execute("insert into user_location (user_id, lat, lon, radius ) values (%s, %s, %s, %s)", (g.loggedin_user_id, lat, lon, radius))
-    g.cur.execute("UPDATE  users SET  lat =  %s, lon = %s WHERE  users.id = %s;", (lat, lon, g.loggedin_user_id))
+    g.cur.execute("UPDATE  users SET  lat =  %s, lon = %s, updated_at = NOW() WHERE  users.id = %s;", (lat, lon, g.loggedin_user_id))
     g.db.commit()
 
     return success()
