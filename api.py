@@ -25,7 +25,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = '123'
+MYSQL_PASSWORD = 'lkgukg'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
