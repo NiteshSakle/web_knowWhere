@@ -25,7 +25,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = 'lkgukg'
+MYSQL_PASSWORD = '123'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
@@ -185,6 +185,7 @@ def send_friend_request():
 def get_friends_list():
     g.cur.execute("""SELECT friends.friend_id as friend_id, friends.id as friend_request_id,
         friends.requester_id as requester_id, friends.status as status,
+        friends.is_sharing as sharing,
         users.email as friend_email, users.first_name as friend_first_name,
         IF(friends.status = 1 , users.lat, 0) as lat,
         IF(friends.status = 1 , users.lon, 0) as lon,
@@ -212,7 +213,8 @@ def get_friend_location():
     friend_id = request.args['friend_id']
     g.cur.execute("""SELECT user_location.lat, user_location.lon, user_location.radius,
         user_location.created_at, user_location.updated_at,
-        friends.friend_id, friends.user_id, friends.status
+        friends.friend_id, friends.user_id, friends.status,
+        friends.is_sharing
         from friends join user_location on friends.friend_id = user_location.user_id
         where user_location.user_id = %s
             and friends.friend_id = %s
@@ -254,6 +256,8 @@ def auth():
 
     access_token = request.form.get('access_token')
     data = urllib.urlopen("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + access_token).read()
+    
+
     json_response = json.loads(data)
     if  not ('error_description' in json_response ):
 
@@ -267,6 +271,7 @@ def auth():
             g.cur.execute("SELECT * FROM users where id = %s", (user_id))
             user = g.cur.fetchone()
         else:
+
             user_id = user["id"]
             g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
             g.db.commit()
@@ -279,7 +284,7 @@ def auth():
         return success({
             "id": user_id,
             "first_name" :  json_response['given_name'],
-            "last_name" :  json_response['family_name'] ,
+            "last_name" :  json_response['family_name'],
             "lat" : user['lat'],
             "lon" : user['lon'],
             "token": token
@@ -297,7 +302,18 @@ def get_unique_token():
             break
     return token
 
+@app.route('/api/v1/user/toggle_sharing', methods=['POST'])
+@requires_auth
+def toggle_sharing():
 
+    friend_id = request.form.get('friend_id')
+    is_sharing = request.form.get('sharing')
+
+    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, , updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,g.loggedin_user_id))
+    g.db.commit()
+
+    return success()   
+    
 if __name__ == "__main__":
     app.debug = True
     app.logger.setLevel(logging.DEBUG)
