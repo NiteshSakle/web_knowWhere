@@ -185,7 +185,7 @@ def send_friend_request():
 def get_friends_list():
     g.cur.execute("""SELECT friends.friend_id as friend_id, friends.id as friend_request_id,
         friends.requester_id as requester_id, friends.status as status,
-        friends.is_sharing as sharing,
+        friends.is_sharing as sharing, users.profile_img_url as friend_profile_url,
         users.email as friend_email, users.first_name as friend_first_name,
         IF(friends.status = 1 , users.lat, 0) as lat,
         IF(friends.status = 1 , users.lon, 0) as lon,
@@ -255,8 +255,9 @@ def get_location():
 def auth():
 
     access_token = request.form.get('access_token')
+    google_id = request.form.get('google_id')
+
     data = urllib.urlopen("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + access_token).read()
-    
 
     json_response = json.loads(data)
     if  not ('error_description' in json_response ):
@@ -265,14 +266,21 @@ def auth():
         user = g.cur.fetchone()
 
         if user is None:
-            g.cur.execute("insert into users (email, lat, lon, first_name, last_name) values (%s, %s, %s, %s, %s)", (json_response['email'], '', '', json_response['given_name'], json_response['family_name'] ))
+            g.cur.execute("insert into users (email, lat, lon, first_name, last_name,google_id,profile_img_url) values (%s, %s, %s, %s, %s, %s, %s)", (json_response['email'], '', '', json_response['given_name'], json_response['family_name'],google_id, json_response['picture'] ))
             g.db.commit()
             user_id = g.cur.lastrowid
             g.cur.execute("SELECT * FROM users where id = %s", (user_id))
             user = g.cur.fetchone()
         else:
-
             user_id = user["id"]
+
+            if user['google_id'] == 0:
+                g.cur.execute("UPDATE `users` SET `google_id`=%s, updated_at = NOW() WHERE `id`=%s", (google_id,user_id))
+                g.db.commit()  
+            if user['profile_img_url'] is None:
+                g.cur.execute("UPDATE `users` SET `profile_img_url`=%s, updated_at = NOW() WHERE `id`=%s", (json_response['picture'],user_id))
+                g.db.commit()                           
+            
             g.cur.execute("update user_tokens set is_valid = 0 where user_id = %s ", (user_id,))
             g.db.commit()
 
