@@ -210,7 +210,15 @@ def get_friends_list():
 @app.route('/api/v1/user/friend_location', methods=['GET'])
 @requires_auth
 def get_friend_location():
+    
     friend_id = request.args['friend_id']
+    
+    g.cur.execute("SELECT is_sharing from friends where user_id=%s and friend_id=%s",(friend_id,g.loggedin_user_id))
+    check_sharing = g.cur.fetchone()
+
+    if check_sharing['is_sharing'] == 0:
+        return _error("Sorry, Your friend stopped sharing location with you.")
+
     g.cur.execute("""SELECT user_location.lat, user_location.lon, user_location.radius,
         user_location.created_at, user_location.updated_at,
         friends.friend_id, friends.user_id, friends.status,
@@ -311,13 +319,13 @@ def get_unique_token():
     return token
 
 @app.route('/api/v1/user/toggle_sharing', methods=['POST'])
-@requires_auth
+#@requires_auth
 def toggle_sharing():
 
     friend_id = request.form.get('friend_id')
     is_sharing = request.form.get('sharing')
 
-    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,g.loggedin_user_id,friend_id))
+    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,20))
     g.db.commit()
 
     return success()   
