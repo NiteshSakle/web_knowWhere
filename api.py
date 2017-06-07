@@ -25,7 +25,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = '123'
+MYSQL_PASSWORD = 'lkgukg'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
@@ -319,13 +319,12 @@ def get_unique_token():
     return token
 
 @app.route('/api/v1/user/toggle_sharing', methods=['POST'])
-#@requires_auth
+@requires_auth
 def toggle_sharing():
-
     friend_id = request.form.get('friend_id')
     is_sharing = request.form.get('sharing')
 
-    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,20))
+    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,g.loggedin_user_id))
     g.db.commit()
 
     return success()   
@@ -335,3 +334,4 @@ if __name__ == "__main__":
     app.logger.setLevel(logging.DEBUG)
     # ASYNC_POOL = Pool(processes=4)
     app.run(debug=True, port=7000, use_reloader=False)
+
