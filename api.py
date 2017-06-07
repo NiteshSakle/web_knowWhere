@@ -25,7 +25,7 @@ app = Flask(__name__)
 API_KEY = 'knowWhereAPIKEY'
 MYSQL_HOSTNAME = 'localhost'
 MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = 'lkgukg'
+MYSQL_PASSWORD = '123'
 MYSQL_DATABASE = 'know_where'
 ASYNC_POOL = None
 
@@ -317,7 +317,7 @@ def toggle_sharing():
     friend_id = request.form.get('friend_id')
     is_sharing = request.form.get('sharing')
 
-    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, , updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,g.loggedin_user_id))
+    g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,g.loggedin_user_id,friend_id))
     g.db.commit()
 
     return success()   
