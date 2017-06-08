@@ -22,13 +22,6 @@ from datetime import date
 
 app = Flask(__name__)
 
-API_KEY = 'knowWhereAPIKEY'
-MYSQL_HOSTNAME = 'localhost'
-MYSQL_USERNAME = 'root'
-MYSQL_PASSWORD = 'lkgukg'
-MYSQL_DATABASE = 'know_where'
-ASYNC_POOL = None
-
 
 # http://stackoverflow.com/questions/16061641/python-logging-split-between-stdout-and-stderr
 class InfoFilter(logging.Filter):
@@ -83,10 +76,10 @@ def teardown_request(exception):
 
 
 def connect_db():
-    db = MySQLdb.connect(host=MYSQL_HOSTNAME,
-                         user=MYSQL_USERNAME,
-                         passwd=MYSQL_PASSWORD,
-                         db=MYSQL_DATABASE,
+    db = MySQLdb.connect(host=app.config['MYSQL_HOSTNAME'],
+                         user=app.config['MYSQL_USERNAME'],
+                         passwd=app.config['MYSQL_PASSWORD'],
+                         db=app.config['MYSQL_DATABASE'],
                          cursorclass=MySQLdb.cursors.DictCursor)
     return db
 
@@ -330,6 +323,7 @@ def toggle_sharing():
     return success()   
     
 if __name__ == "__main__":
+    app.config.from_pyfile('config.cfg')
     app.debug = True
     app.logger.setLevel(logging.DEBUG)
     # ASYNC_POOL = Pool(processes=4)
