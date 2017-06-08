@@ -320,7 +320,22 @@ def toggle_sharing():
     g.cur.execute("UPDATE `friends` SET `is_sharing`=%s, updated_at = NOW()WHERE `friend_id`= %s AND `user_id`=%s",(is_sharing,friend_id,g.loggedin_user_id))
     g.db.commit()
 
-    return success()   
+    return success()  
+
+@app.route('/api/v1/user/whoissharing', methods=['GET'])
+@requires_auth
+def whoissharing():
+    
+    g.cur.execute(""" SELECT users.profile_img_url as friend_profile_url, users.email as friend_email, 
+        users.first_name as friend_first_name, users.lat, users.lon
+        FROM users JOIN friends ON users.id = friends.user_id
+        WHERE friends.friend_id=%s and friends.is_sharing=1""",(g.loggedin_user_id))  
+    friends = g.cur.fetchall();
+
+    if friends is not None:
+        return success(friends)
+    else:
+        return _error("None of your friend is sharing location with you right now.")       
     
 if __name__ == "__main__":
     app.config.from_pyfile('config.cfg')
