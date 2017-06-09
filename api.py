@@ -327,7 +327,7 @@ def toggle_sharing():
 def whoissharing():
     
     g.cur.execute(""" SELECT users.profile_img_url as friend_profile_url, users.email as friend_email, 
-        users.first_name as friend_first_name, users.lat, users.lon
+        users.first_name as friend_first_name, users.lat, users.lon, users.updated_at as last_known_time
         FROM users JOIN friends ON users.id = friends.user_id
         WHERE friends.friend_id=%s and friends.is_sharing=1""",(g.loggedin_user_id))  
     friends = g.cur.fetchall();
