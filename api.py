@@ -164,8 +164,8 @@ def send_friend_request():
     g.cur.execute("SELECT id FROM users where email = %s ", (friend_email))
     friend = g.cur.fetchone()
     if friend is not None :
-        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id))
-        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id ) values (%s, %s, %s, %s)", ( friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id))
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id, 0))
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s)", ( friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id, 0))
         g.db.commit()
 
         return success()
@@ -235,8 +235,8 @@ def get_friend_location():
 def update_friend_request_status():
     friend_id = request.form.get('friend_id')
 
-    g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(g.loggedin_user_id, friend_id))
-    g.cur.execute("UPDATE  friends SET  status = 1 WHERE  user_id = %s and friend_id = %s",(friend_id, g.loggedin_user_id))
+    g.cur.execute("UPDATE  friends SET  status = 1, is_sharing = 1 WHERE  user_id = %s and friend_id = %s",(g.loggedin_user_id, friend_id))
+    g.cur.execute("UPDATE  friends SET  status = 1, is_sharing = 1 WHERE  user_id = %s and friend_id = %s",(friend_id, g.loggedin_user_id))
     g.db.commit()
 
     return success()
@@ -329,7 +329,7 @@ def whoissharing():
     g.cur.execute(""" SELECT users.profile_img_url as friend_profile_url, users.email as friend_email, 
         users.first_name as friend_first_name, users.lat, users.lon, users.updated_at as last_known_time
         FROM users JOIN friends ON users.id = friends.user_id
-        WHERE friends.friend_id=%s and friends.is_sharing=1""",(g.loggedin_user_id))  
+        WHERE friends.friend_id = %s and friends.is_sharing = 1 and friends.status = 1""",(g.loggedin_user_id))  
     friends = g.cur.fetchall();
 
     if friends is not None:

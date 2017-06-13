@@ -4,3 +4,5 @@ ALTER TABLE  `friends` ADD  `is_sharing` BOOLEAN NOT NULL AFTER  `requester_id` 
 ALTER TABLE  `users` ADD  `google_id` INT NOT NULL AFTER  `id` ;
 
 ALTER TABLE  `users` ADD  `profile_img_url` TEXT CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL AFTER  `lon` ;
+
+ALTER TABLE  `friends` CHANGE  `is_sharing`  `is_sharing` TINYINT( 1 ) NOT NULL DEFAULT  '1';
