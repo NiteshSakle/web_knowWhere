@@ -205,10 +205,15 @@ def get_friends_list():
 def get_friend_location():
     
     friend_id = request.args['friend_id']
+
+    if g.loggedin_user_id == json.loads(friend_id):
+        g.cur.execute("select lat, lon, radius, created_at, updated_at from user_location where user_id = %s order by created_at DESC limit 50", (g.loggedin_user_id,))
+        locations = g.cur.fetchall()
+        return success(locations)
     
+    #check if friend is sharing with user    
     g.cur.execute("SELECT is_sharing from friends where user_id=%s and friend_id=%s",(friend_id,g.loggedin_user_id))
     check_sharing = g.cur.fetchone()
-
     if check_sharing['is_sharing'] == 0:
         return _error("Sorry, Your friend stopped sharing location with you.")
 
