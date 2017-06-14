@@ -17,6 +17,7 @@ import sys
 import datetime
 import uuid
 import urllib
+import smtplib
 from datetime import datetime
 from datetime import date
 
@@ -124,6 +125,30 @@ def requires_auth(f):
             return f(*args, **kwargs)
     return decorated
 
+def get_user_details(id):
+    g.cur.execute("SELECT * FROM users where id= %s", (id))
+    user = g.cur.fetchone()  
+    return user
+
+#send a mail to user
+def notifyUser(toEmail,message):
+    s = smtplib.SMTP('smtp.gmail.com', 587)
+    s.ehlo()
+    s.starttls()
+    s.ehlo()
+    s.login(app.config['ADMIN_EMAIL'], app.config['ADMIN_PASS'])    
+    s.sendmail(app.config['ADMIN_EMAIL'], toEmail, message)
+    s.quit()
+
+def get_unique_token():
+    token = False
+    while 1:
+        token = uuid.uuid4().hex
+        g.cur.execute("select id from user_tokens where token = %s", (token,))
+        found_token = g.cur.fetchone()
+        if found_token is None:
+            break
+    return token    
 
 @app.route('/api/v1/cache/<app_id>', methods=['GET'])
 @requires_auth
@@ -164,10 +189,13 @@ def send_friend_request():
     g.cur.execute("SELECT id FROM users where email = %s ", (friend_email))
     friend = g.cur.fetchone()
     if friend is not None :
-        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id, 0))
-        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s)", ( friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id, 0))
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s, %s)", (g.loggedin_user_id, friend["id"], 0, g.loggedin_user_id, 0))
+        g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s, %s)", (friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id, 0))
         g.db.commit()
-
+        user = get_user_details(g.loggedin_user_id)
+        msg = "Hey there...!\n You have got one new friend request from %s %s. Kindly accept the same at MapMate and start tracking your buddies.." % (user["first_name"], user["last_name"])
+        message = 'Subject: {}\n\n{}'.format(app.config['FR_REQ_SENT_SUB'], msg)
+        notifyUser(friend_email,message)
         return success()
     else :
         return _error("Requested email hasn't registered yet")
@@ -243,6 +271,11 @@ def update_friend_request_status():
     g.cur.execute("UPDATE  friends SET  status = 1, is_sharing = 1 WHERE  user_id = %s and friend_id = %s",(g.loggedin_user_id, friend_id))
     g.cur.execute("UPDATE  friends SET  status = 1, is_sharing = 1 WHERE  user_id = %s and friend_id = %s",(friend_id, g.loggedin_user_id))
     g.db.commit()
+    user = get_user_details(g.loggedin_user_id)
+    friend = get_user_details(friend_id)
+    msg = "Hey there...!\n %s %s accepted your friend request. Login to MapMate and start tracking.." % (user["first_name"], user["last_name"])
+    message = 'Subject: {}\n\n{}'.format(app.config['FR_REQ_ACC_SUB'], msg)
+    notifyUser(friend['email'],message)
 
     return success()
 
@@ -306,16 +339,6 @@ def auth():
     else:
         return _error(json_response['error_description'])
 
-def get_unique_token():
-    token = False
-    while 1:
-        token = uuid.uuid4().hex
-        g.cur.execute("select id from user_tokens where token = %s", (token,))
-        found_token = g.cur.fetchone()
-        if found_token is None:
-            break
-    return token
-
 @app.route('/api/v1/user/toggle_sharing', methods=['POST'])
 @requires_auth
 def toggle_sharing():
@@ -341,7 +364,7 @@ def whoissharing():
         return success(friends)
     else:
         return _error("None of your friend is sharing location with you right now.")       
-    
+
 if __name__ == "__main__":
     app.config.from_pyfile('config.cfg')
     app.debug = True
