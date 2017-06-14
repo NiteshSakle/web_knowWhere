@@ -125,6 +125,16 @@ def requires_auth(f):
             return f(*args, **kwargs)
     return decorated
 
+def get_unique_token():
+    token = False
+    while 1:
+        token = uuid.uuid4().hex
+        g.cur.execute("select id from user_tokens where token = %s", (token,))
+        found_token = g.cur.fetchone()
+        if found_token is None:
+            break
+    return token    
+
 def get_user_details(id):
     g.cur.execute("SELECT * FROM users where id= %s", (id))
     user = g.cur.fetchone()  
@@ -140,34 +150,16 @@ def notifyUser(toEmail,message):
     s.sendmail(app.config['ADMIN_EMAIL'], toEmail, message)
     s.quit()
 
-def get_unique_token():
-    token = False
-    while 1:
-        token = uuid.uuid4().hex
-        g.cur.execute("select id from user_tokens where token = %s", (token,))
-        found_token = g.cur.fetchone()
-        if found_token is None:
-            break
-    return token    
-
 @app.route('/api/v1/cache/<app_id>', methods=['GET'])
 @requires_auth
 def get_cache_status(app_id):
     results = fetch_app_id_data(app_id)
     return jsonify(data=results)
 
-
-@app.route("/")
-def hello():
-    resp = Response("Know Where!")
-    return resp
-
-#
 # @app.errorhandler(Exception)
 # def handle_invalid_usage(error):
 #     app.logger.error(error)
 #     return _error(str(error))
-
 
 @app.route('/api/v1/user/location', methods=['POST'])
 @requires_auth
@@ -363,7 +355,20 @@ def whoissharing():
     if friends is not None:
         return success(friends)
     else:
-        return _error("None of your friend is sharing location with you right now.")       
+        return _error("None of your friend is sharing location with you right now.")  
+
+@app.route('/api/v1/check_register', methods=['GET'])
+@requires_auth
+def is_registered():
+    friend_email = request.args['friend_email']
+    g.cur.execute("SELECT id FROM users where email = %s ", (friend_email))
+    friend = g.cur.fetchone()
+    if friend is None :
+        return _error("Requested email hasn't registered yet")
+    else:
+        return success({
+            "friend_email" : friend_email
+        })             
 
 if __name__ == "__main__":
     app.config.from_pyfile('config.cfg')
