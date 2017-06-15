@@ -368,7 +368,17 @@ def is_registered():
     else:
         return success({
             "friend_email" : friend_email
-        })             
+        })    
+
+@app.route('/api/v1/invite_mail', methods=['GET'])
+@requires_auth
+def invite_mail():
+    friend_email = request.args['friend_email']
+    msg = "Hey there...!\n I love using MapMate, it's simple and incredible. You should try it here."
+    message = 'Subject: {}\n\n{}'.format(app.config['INVITE_SUB'], msg)
+    notifyUser(friend_email,message)
+    return success()
+
 
 if __name__ == "__main__":
     app.config.from_pyfile('config.cfg')
