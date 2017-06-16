@@ -185,7 +185,7 @@ def send_friend_request():
         g.cur.execute("insert into friends (user_id, friend_id, status, requester_id, is_sharing) values (%s, %s, %s, %s, %s)", (friend["id"], g.loggedin_user_id, 0, g.loggedin_user_id, 0))
         g.db.commit()
         user = get_user_details(g.loggedin_user_id)
-        msg = "Hey there...!\n You have got one new friend request from %s %s. Kindly accept the same at MapMate and start tracking your buddies.." % (user["first_name"], user["last_name"])
+        msg = "Hey there...!\nYour friend %s %s wants to share location with you. Please login to MapMate, accept invite and start tracking..!!" % (user["first_name"], user["last_name"])
         message = 'Subject: {}\n\n{}'.format(app.config['FR_REQ_SENT_SUB'], msg)
         notifyUser(friend_email,message)
         return success()
